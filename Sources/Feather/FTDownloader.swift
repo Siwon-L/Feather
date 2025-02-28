@@ -47,9 +47,10 @@ final class FTDownloader: Sendable {
         diskCache.save(requestURL: url, data: data, eTag: nil, modified: lastModified)
         return data
       }
+      diskCache.save(requestURL: url, data: data, eTag: nil, modified: nil)
       return data
     case 304:
-      await diskCache.save(requestURL: url, data: tempData, eTag: eTag, modified: modified)
+      diskCache.save(requestURL: url, data: tempData, eTag: eTag, modified: modified)
       return tempData
     default: throw URLError(.badServerResponse)
     }
