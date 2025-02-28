@@ -29,19 +29,26 @@ final class FTFileManagerTests: XCTestCase {
     let fileName = "test"
     sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
     // Act
-    let deleteURL = sut.remove(fileName: fileName)
-    // Assert
-    XCTAssertEqual(deleteURL, sut.path(fileName: fileName))
-    XCTAssertFalse(sut.fileExists(fileName: fileName))
+    do {
+      try sut.remove(fileName: fileName)
+      // Assert
+      XCTAssertFalse(sut.fileExists(fileName: fileName))
+    } catch {
+      XCTFail()
+    }
   }
   
   func test_remove_fail() {
     // Arrange
     let fileName = "test"
     // Act
-    let result = sut.remove(fileName: fileName)
-    // Assert
-    XCTAssertNil(result)
+    do {
+      try sut.remove(fileName: fileName)
+      // Assert
+      XCTFail()
+    } catch {
+      
+    }
   }
   
   func test_get_attributes() {
