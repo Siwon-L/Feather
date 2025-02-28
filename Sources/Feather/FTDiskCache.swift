@@ -12,8 +12,10 @@ public final class FTDiskCache: @unchecked Sendable {
   public static let shared = FTDiskCache()
   public var config: FTDiskCacheConfig? = nil {
     didSet {
-      guard let config else { return }
-      self.ttl = config.timeOut
+      if oldValue != config {
+        guard let config else { self.ttl = 60 * 60 * 24; return }
+        self.ttl = config.timeOut
+      }
     }
   }
   

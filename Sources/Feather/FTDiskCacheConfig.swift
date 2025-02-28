@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct FTDiskCacheConfig: Sendable {
+public struct FTDiskCacheConfig: Sendable, Equatable {
   public let timeOut: TimeInterval
   
   public init(timeOut: TimeInterval) {
