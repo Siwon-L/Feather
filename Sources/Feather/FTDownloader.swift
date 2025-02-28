@@ -38,17 +38,14 @@ final class FTDownloader: Sendable {
     }
     switch response.statusCode {
     case 200..<300:
-      if let headers = response.allHeaderFields as? [String: Any] {
-          let lowercasedHeaders = Dictionary(uniqueKeysWithValues: headers.map { key, value in
-              (key.lowercased(), value)
-          })
-          if let eTag = lowercasedHeaders["etag"] as? String {
-            diskCache.save(requestURL: url, data: data, eTag: eTag, modified: nil)
-            return data
-          }  else if let lastModified = lowercasedHeaders["last-modified"] as? String {
-            diskCache.save(requestURL: url, data: data, eTag: nil, modified: lastModified)
-            return data
-          }
+      guard let headers = response.allHeaderFields as? [String: Any] else { return data }
+      let lowercasedHeaders = Dictionary(uniqueKeysWithValues: headers.map { ($0.lowercased(), $1) })
+      if let eTag = lowercasedHeaders["etag"] as? String {
+        diskCache.save(requestURL: url, data: data, eTag: eTag, modified: nil)
+        return data
+      }  else if let lastModified = lowercasedHeaders["last-modified"] as? String {
+        diskCache.save(requestURL: url, data: data, eTag: nil, modified: lastModified)
+        return data
       }
       return data
     case 304:
