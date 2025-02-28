@@ -26,9 +26,9 @@ open class FTImageView: UIImageView {
     downloadTask = Task { [weak self] in
       guard let self = self else { return }
       // 다운로드 작업이 취소되었는지 중간에 확인할 수 있음
-      let downloadedURL = try await imageDownloader.download(url: imageURL)
+      let data = try await imageDownloader.download(url: imageURL)
       if Task.isCancelled { return }
-      let image = UIImage(contentsOfFile: downloadedURL.path())
+      let image = UIImage(data: data)
       await MainActor.run {
         self.image = image
       }

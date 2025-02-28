@@ -8,7 +8,7 @@
 import Foundation
 
 struct FTCacheInfo {
-  let imageURL: URL
+  let imageData: Data
   let eTag: String?
   let modified: String?
 }

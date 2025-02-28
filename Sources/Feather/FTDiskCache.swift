@@ -8,7 +8,7 @@
 import CryptoKit
 import Foundation
 
-public actor FTDiskCache: Sendable {
+public final class FTDiskCache: @unchecked Sendable {
   public static let shared = FTDiskCache()
   public var config: FTDiskCacheConfig? = nil {
     didSet {
@@ -28,30 +28,31 @@ public actor FTDiskCache: Sendable {
     self.ttl = ttl
   }
   
-  func save(requestURL: URL, imageFile: URL, eTag: String?, modified: String?) {
+  func save(requestURL: URL, data: Data, eTag: String?, modified: String?) {
     let fileName = sha256(requestURL.absoluteString)
     guard !fileManager.fileExists(fileName: fileName) else { return }
     //trimLRUCache()
-    let data = try? Data(contentsOf: imageFile)
     fileManager.create(fileName: fileName, data: data, eTag: eTag, modified: modified)
     //updateAccessTime(fileName: fileName)
   }
   
   func read(requestURL: URL) -> (FTCacheInfo, Bool)? {
     let fileName = sha256(requestURL.absoluteString)
-    guard fileManager.fileExists(fileName: fileName) else { return nil }
+    let readFileURL = fileManager.path(fileName: fileName)
+    guard fileManager.fileExists(fileName: fileName),
+          let imageData = try? Data(contentsOf: readFileURL.appending(path: "image")) else { return nil }
     if isTimeOut(fileName: fileName) {
-      guard let deleteURL = delete(fileName: fileName) else { return nil }
       let cache = FTCacheInfo(
-        imageURL: deleteURL.appending(path: "image"),
-        eTag: try? String(contentsOf: deleteURL.appending(path: "eTag.txt"), encoding: .utf8),
-        modified: try? String(contentsOf: deleteURL.appending(path: "modified.txt"), encoding: .utf8)
+        imageData: imageData,
+        eTag: try? String(contentsOf: readFileURL.appending(path: "eTag.txt"), encoding: .utf8),
+        modified: try? String(contentsOf: readFileURL.appending(path: "modified.txt"), encoding: .utf8)
       )
+      delete(fileName: fileName)
       return (cache, false)
     }
     //updateAccessTime(fileName: fileName)
     let cache = FTCacheInfo(
-      imageURL: fileManager.path(fileName: fileName + "/image"),
+      imageData: imageData,
       eTag: nil,
       modified: nil
     )

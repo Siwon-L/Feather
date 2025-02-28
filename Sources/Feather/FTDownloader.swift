@@ -15,16 +15,16 @@ final class FTDownloader: Sendable {
     self.diskCache = diskCache
   }
   
-  func download(url: URL) async throws -> URL {
-    var tempFileURL: URL!
+  func download(url: URL) async throws -> Data {
+    var tempData: Data!
     var eTag: String?
     var modified: String?
     
-    if let (cache, isHit) = await diskCache.read(requestURL: url) {
+    if let (cache, isHit) = diskCache.read(requestURL: url) {
       if isHit {
-        return cache.imageURL
+        return cache.imageData
       } else {
-        tempFileURL = cache.imageURL
+        tempData = cache.imageData
         eTag = cache.eTag
         modified = cache.modified
       }
@@ -32,23 +32,28 @@ final class FTDownloader: Sendable {
     
     let urlRequest = configureURLRequest(URLRequest(url: url), eTag: eTag, modified: modified)
     
-    guard let (fileURL, response) = try? await URLSession.shared.download(for: urlRequest),
+    guard let (data, response) = try? await URLSession.shared.data(for: urlRequest),
           let response = response as? HTTPURLResponse else {
       throw URLError(.unknown)
     }
     switch response.statusCode {
     case 200..<300:
-      if let eTag = response.allHeaderFields["ETag"] as? String {
-        await diskCache.save(requestURL: url, imageFile: fileURL, eTag: eTag, modified: nil)
-        return fileURL
-      } else if let lastModified = response.allHeaderFields["Last-Modified"] as? String {
-        await diskCache.save(requestURL: url, imageFile: fileURL, eTag: nil, modified: lastModified)
-        return fileURL
+      if let headers = response.allHeaderFields as? [String: Any] {
+          let lowercasedHeaders = Dictionary(uniqueKeysWithValues: headers.map { key, value in
+              (key.lowercased(), value)
+          })
+          if let eTag = lowercasedHeaders["etag"] as? String {
+            diskCache.save(requestURL: url, data: data, eTag: eTag, modified: nil)
+            return data
+          }  else if let lastModified = lowercasedHeaders["last-modified"] as? String {
+            diskCache.save(requestURL: url, data: data, eTag: nil, modified: lastModified)
+            return data
+          }
       }
-      return fileURL
+      return data
     case 304:
-      await diskCache.save(requestURL: url, imageFile: tempFileURL, eTag: eTag, modified: modified)
-      return tempFileURL
+      await diskCache.save(requestURL: url, data: tempData, eTag: eTag, modified: modified)
+      return tempData
     default: throw URLError(.badServerResponse)
     }
   }
@@ -57,9 +62,9 @@ final class FTDownloader: Sendable {
     var urlRequest = urlRequest
     urlRequest.httpMethod = "GET"
     if let eTag {
-      urlRequest.addValue("If-None-Match", forHTTPHeaderField: eTag)
+      urlRequest.addValue(eTag, forHTTPHeaderField: "If-None-Match")
     } else if let modified {
-      urlRequest.addValue("If-Modified-Since", forHTTPHeaderField: modified)
+      urlRequest.addValue(modified, forHTTPHeaderField: "If-Modified-Since")
     }
     return urlRequest
   }
