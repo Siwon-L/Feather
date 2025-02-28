@@ -42,14 +42,9 @@ final class FTFileManager: @unchecked Sendable {
     return fileManager.createFile(atPath: destination.path() + "/image", contents: data)
   }
   
-  func remove(fileName: String) -> URL? {
+  func remove(fileName: String) throws {
     let destination = path(fileName: fileName)
-    do {
-      try fileManager.removeItem(at: destination)
-      return destination
-    } catch {
-      return nil
-    }
+    try fileManager.removeItem(at: destination)
   }
   
   func removeAll() throws {

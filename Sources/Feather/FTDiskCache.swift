@@ -66,8 +66,8 @@ extension FTDiskCache {
       return hash.compactMap { String(format: "%02x", $0) }.joined()
   }
   
-  private func delete(fileName: String) -> URL? {
-    fileManager.remove(fileName: fileName)
+  private func delete(fileName: String) {
+    try? fileManager.remove(fileName: fileName)
   }
   
   private func isTimeOut(fileName: String) -> Bool {
