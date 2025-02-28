@@ -10,7 +10,7 @@ import Foundation
 public struct FTDiskCacheConfig: Sendable {
   public let timeOut: TimeInterval
   
-  init(timeOut: TimeInterval) {
+  public init(timeOut: TimeInterval) {
     self.timeOut = timeOut
   }
 }
