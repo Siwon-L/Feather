@@ -31,7 +31,7 @@ import Feather
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
   func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-    FTDiskCache.shared.config = FTDiskCacheConfig(timeOut: 7 * 24 * 60 * 60)
+    FTDiskCache.shared.config = FTDiskCacheConfig(timeOut: 7 * 24 * 60 * 60, policy: .LRU(maxSize: 1024 * 1024 * 1000))
     return true
   }
 }
