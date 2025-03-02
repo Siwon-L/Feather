@@ -20,7 +20,7 @@ final class FTDownloader: Sendable {
     var eTag: String?
     var modified: String?
     
-    if let (cache, isHit) = diskCache.read(requestURL: url) {
+    if let (cache, isHit) = await diskCache.read(requestURL: url) {
       if isHit {
         return cache.imageData
       } else {
@@ -41,16 +41,16 @@ final class FTDownloader: Sendable {
       guard let headers = response.allHeaderFields as? [String: Any] else { return data }
       let lowercasedHeaders = Dictionary(uniqueKeysWithValues: headers.map { ($0.lowercased(), $1) })
       if let eTag = lowercasedHeaders["etag"] as? String {
-        diskCache.save(requestURL: url, data: data, eTag: eTag, modified: nil)
+        await diskCache.save(requestURL: url, data: data, eTag: eTag, modified: nil)
         return data
       }  else if let lastModified = lowercasedHeaders["last-modified"] as? String {
-        diskCache.save(requestURL: url, data: data, eTag: nil, modified: lastModified)
+        await diskCache.save(requestURL: url, data: data, eTag: nil, modified: lastModified)
         return data
       }
-      diskCache.save(requestURL: url, data: data, eTag: nil, modified: nil)
+      await diskCache.save(requestURL: url, data: data, eTag: nil, modified: nil)
       return data
     case 304:
-      diskCache.save(requestURL: url, data: tempData, eTag: eTag, modified: modified)
+      await diskCache.save(requestURL: url, data: tempData, eTag: eTag, modified: modified)
       return tempData
     default: throw URLError(.badServerResponse)
     }

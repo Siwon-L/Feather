@@ -5,7 +5,9 @@
 //  Created by 이시원 on 3/2/25.
 //
 
+import Foundation
+
 protocol FTPolicy: Sendable {
-  func execute(deleteHandler: (String) -> Void)
-  func updateAccessTime(fileName: String)
+  func execute() async -> [URL]
+  func updateAccessTime(fileName: String) async
 }
