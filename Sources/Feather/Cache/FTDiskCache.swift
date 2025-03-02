@@ -23,8 +23,8 @@ public final class FTDiskCache: @unchecked Sendable {
   private var ttl: TimeInterval
   
   init(
-    fileManager: FTFileManager = FTFileManager(),
-    ttl: TimeInterval = 60 * 60 * 24
+    fileManager: FTFileManager = FTFileManager.shared,
+    ttl: TimeInterval = FTConstant.defaultTimeOut
   ) {
     self.fileManager = fileManager
     self.ttl = ttl
