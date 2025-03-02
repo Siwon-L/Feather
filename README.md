@@ -38,7 +38,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 ```
 You can configure the cache expiration time using FTDiskCacheConfig.
 
-Expired cache images are also refreshed more efficiently by leveraging the ETag and Last-Modified HTTP headers.
+Expired cache images are also refreshed more efficiently by leveraging the `ETag` and `Last-Modified` HTTP headers.
 
 Furthermore, you can set the maximum cache size and choose the caching policy that fits your needs. Feather efficiently manages cached data using the LRU (Least Recently Used) algorithm.
 
