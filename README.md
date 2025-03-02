@@ -10,6 +10,8 @@ Features provide a lightweight yet powerful image downloading and caching functi
 - Efficient caching data handling using `ETag` and `Last-Modified`
 - Cancels previous tasks when a new image URL is set
 - Configurable cache expiration time
+- Set a maximum cache size and manage data efficiently using LRU (Least Recently Used)
+- Prevent data races using `Actor`
 
 ### Image Download & Caching
 
@@ -36,13 +38,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 ```
 You can set the expiration time using `FTDiskCacheConfig`. (More configuration options will be provided in the future.)
 Additionally, expired cache images are refreshed more efficiently using the `ETag` and `Last-Modified` HTTP headers.
+In addition, you can configure the maximum cache size along with the desired caching policy. Feather efficiently manages cached data using the LRU (Least Recently Used) algorithm.
 
 ## Installation
 
 ### Swift Package Manager
 1. File > Swift Packages > Add Package Dependency
 2. Add `https://github.com/Siwon-L/Feather.git`
-3. Select "Up to Next Major" with "1.0.0"
+3. Select "Up to Next Major" with "1.1.0"
 
 ## License
 Feather is released under the MIT license. See LICENSE for details.
