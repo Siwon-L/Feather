@@ -12,10 +12,8 @@ public final class FTDiskCache: @unchecked Sendable {
   public static let shared = FTDiskCache()
   public var config: FTDiskCacheConfig? = nil {
     didSet {
-      if oldValue != config {
-        guard let config else { self.ttl = 60 * 60 * 24; return }
-        self.ttl = config.timeOut
-      }
+      guard let config else { self.ttl = 60 * 60 * 24; return }
+      self.ttl = config.timeOut
     }
   }
   
@@ -33,9 +31,10 @@ public final class FTDiskCache: @unchecked Sendable {
   func save(requestURL: URL, data: Data, eTag: String?, modified: String?) {
     let fileName = sha256(requestURL.absoluteString)
     guard !fileManager.fileExists(fileName: fileName) else { return }
-    //trimLRUCache()
+    config?.policy?.execute(deleteHandler: {
+      delete(fileName: $0)
+    })
     fileManager.create(fileName: fileName, data: data, eTag: eTag, modified: modified)
-    //updateAccessTime(fileName: fileName)
   }
   
   func read(requestURL: URL) -> (FTCacheInfo, Bool)? {
@@ -52,7 +51,7 @@ public final class FTDiskCache: @unchecked Sendable {
       delete(fileName: fileName)
       return (cache, false)
     }
-    //updateAccessTime(fileName: fileName)
+    config?.policy?.updateAccessTime(fileName: fileName)
     let cache = FTCacheInfo(
       imageData: imageData,
       eTag: nil,

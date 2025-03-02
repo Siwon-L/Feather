@@ -7,16 +7,16 @@
 
 import Foundation
 
-struct LRUPolicy {
-  private let maxSize: Int64
+struct LRUPolicy: FTPolicy {
+  private let maxSize: UInt64
   private let fileManager: FTFileManager
   
-  init(maxSize: Int64, fileManager: FTFileManager = FTFileManager.shared) {
+  init(maxSize: UInt64, fileManager: FTFileManager = FTFileManager.shared) {
     self.maxSize = maxSize
     self.fileManager = fileManager
   }
   
-  private func trimLRUCache(deleteHandler: (String) -> Void) {
+  func execute(deleteHandler: (String) -> Void) {
     guard let files = try? fileManager.contentsOfDirectory(
       includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey]
     ) else { return }
@@ -26,15 +26,17 @@ struct LRUPolicy {
     deleteFilesExceedingMaxSize(files, totalSize: totalFileSize, deleteHandler: deleteHandler)
   }
   
+  func updateAccessTime(fileName: String) {
+    try? fileManager.setAttributes([.modificationDate: Date.now], fileName: fileName)
+  }
+}
+
+extension LRUPolicy {
   private func calculateTotalSize(_ files: [URL]) -> Int {
     return files.reduce(0) { totalSize, file in
       let fileSize = (try? fileManager.directorySize(at: file)) ?? 0
       return totalSize + fileSize
     }
-  }
-  
-  private func updateAccessTime(fileName: String) {
-    try? fileManager.setAttributes([.modificationDate: Date.now], fileName: fileName)
   }
   
   private func deleteFilesExceedingMaxSize(_ files: [URL], totalSize: Int, deleteHandler: (String) -> Void) {
