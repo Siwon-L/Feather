@@ -12,10 +12,8 @@ public final class FTDiskCache: @unchecked Sendable {
   public static let shared = FTDiskCache()
   public var config: FTDiskCacheConfig? = nil {
     didSet {
-      if oldValue != config {
-        guard let config else { self.ttl = 60 * 60 * 24; return }
-        self.ttl = config.timeOut
-      }
+      guard let config else { self.ttl = FTConstant.defaultTimeOut; return }
+      self.ttl = config.timeOut
     }
   }
   
@@ -30,29 +28,32 @@ public final class FTDiskCache: @unchecked Sendable {
     self.ttl = ttl
   }
   
-  func save(requestURL: URL, data: Data, eTag: String?, modified: String?) {
+  func save(requestURL: URL, data: Data, eTag: String?, modified: String?) async {
     let fileName = sha256(requestURL.absoluteString)
-    guard !fileManager.fileExists(fileName: fileName) else { return }
-    //trimLRUCache()
-    fileManager.create(fileName: fileName, data: data, eTag: eTag, modified: modified)
-    //updateAccessTime(fileName: fileName)
+    guard await !fileManager.fileExists(fileName: fileName) else { return }
+    await fileManager.create(fileName: fileName, data: data, eTag: eTag, modified: modified)
+    if let deleteFiles = await config?.policy?.execute() {
+      for deleteFile in deleteFiles {
+        await delete(fileName: deleteFile.lastPathComponent)
+      }
+    }
   }
   
-  func read(requestURL: URL) -> (FTCacheInfo, Bool)? {
+  func read(requestURL: URL) async -> (FTCacheInfo, Bool)? {
     let fileName = sha256(requestURL.absoluteString)
-    let readFileURL = fileManager.path(fileName: fileName)
-    guard fileManager.fileExists(fileName: fileName),
+    let readFileURL = await fileManager.path(fileName: fileName)
+    guard await fileManager.fileExists(fileName: fileName),
           let imageData = try? Data(contentsOf: readFileURL.appending(path: "image")) else { return nil }
-    if isTimeOut(fileName: fileName) {
+    if await isTimeOut(fileName: fileName) {
       let cache = FTCacheInfo(
         imageData: imageData,
         eTag: try? String(contentsOf: readFileURL.appending(path: "eTag.txt"), encoding: .utf8),
         modified: try? String(contentsOf: readFileURL.appending(path: "modified.txt"), encoding: .utf8)
       )
-      delete(fileName: fileName)
+      await delete(fileName: fileName)
       return (cache, false)
     }
-    //updateAccessTime(fileName: fileName)
+    await config?.policy?.updateAccessTime(fileName: fileName)
     let cache = FTCacheInfo(
       imageData: imageData,
       eTag: nil,
@@ -69,13 +70,12 @@ extension FTDiskCache {
       return hash.compactMap { String(format: "%02x", $0) }.joined()
   }
   
-  private func delete(fileName: String) {
-    try? fileManager.remove(fileName: fileName)
+  private func delete(fileName: String) async {
+    try? await fileManager.remove(fileName: fileName)
   }
   
-  private func isTimeOut(fileName: String) -> Bool {
-    if let attributes = try? fileManager.attributesOfItem(fileName: fileName),
-       let creationDate = attributes[.creationDate] as? Date {
+  private func isTimeOut(fileName: String) async -> Bool {
+    if let creationDate = try? await fileManager.getFileCreateDate(fileName: fileName) {
       if ttl < Date().timeIntervalSince(creationDate) {
         return true
       }

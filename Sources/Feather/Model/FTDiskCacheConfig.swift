@@ -7,10 +7,18 @@
 
 import Foundation
 
-public struct FTDiskCacheConfig: Sendable, Equatable {
-  public let timeOut: TimeInterval
+public struct FTDiskCacheConfig: Sendable {
+  let timeOut: TimeInterval
+  let policy: FTPolicy?
   
-  public init(timeOut: TimeInterval) {
+  public init(timeOut: TimeInterval = FTConstant.defaultTimeOut, policy: FTPolicyType = .none) {
     self.timeOut = timeOut
+    switch policy {
+    case .none:
+      self.policy = nil
+    case let .LRU(maxSize):
+      self.policy = LRUPolicy(maxSize: maxSize)
+    }
   }
 }
+

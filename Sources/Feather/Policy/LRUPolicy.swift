@@ -7,39 +7,34 @@
 
 import Foundation
 
-struct LRUPolicy {
-  private let maxSize: Int64
+struct LRUPolicy: FTPolicy {
+  private let maxSize: UInt64
   private let fileManager: FTFileManager
   
-  init(maxSize: Int64, fileManager: FTFileManager = FTFileManager.shared) {
+  init(maxSize: UInt64, fileManager: FTFileManager = FTFileManager.shared) {
     self.maxSize = maxSize
     self.fileManager = fileManager
   }
   
-  private func trimLRUCache(deleteHandler: (String) -> Void) {
-    guard let files = try? fileManager.contentsOfDirectory(
+  func execute() async -> [URL] {
+    guard let files = try? await fileManager.contentsOfDirectory(
       includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey]
-    ) else { return }
+    ) else { return [] }
     
-    let totalFileSize = calculateTotalSize(files)
-    guard totalFileSize >= maxSize else { return }
-    deleteFilesExceedingMaxSize(files, totalSize: totalFileSize, deleteHandler: deleteHandler)
+    guard await fileManager.getTotalCacheSize() >= maxSize else { return [] }
+    return await deleteFilesExceedingMaxSize(files)
   }
   
-  private func calculateTotalSize(_ files: [URL]) -> Int {
-    return files.reduce(0) { totalSize, file in
-      let fileSize = (try? fileManager.directorySize(at: file)) ?? 0
-      return totalSize + fileSize
-    }
+  func updateAccessTime(fileName: String) async {
+    try? await fileManager.setAttributes([.modificationDate: Date.now], fileName: fileName)
   }
-  
-  private func updateAccessTime(fileName: String) {
-    try? fileManager.setAttributes([.modificationDate: Date.now], fileName: fileName)
-  }
-  
-  private func deleteFilesExceedingMaxSize(_ files: [URL], totalSize: Int, deleteHandler: (String) -> Void) {
-    var totalSize = totalSize
-    files
+}
+
+extension LRUPolicy {
+  private func deleteFilesExceedingMaxSize(_ files: [URL]) async -> [URL] {
+    var deletFiles: [URL] = []
+    var totalSize = await fileManager.getTotalCacheSize()
+    let files = files
       .sorted {
         let firstFile = (try? $0.resourceValues(
           forKeys: [.contentModificationDateKey]).contentModificationDate
@@ -51,11 +46,12 @@ struct LRUPolicy {
         
         return firstFile < secondFile
       }
-      .forEach { file in
-        guard totalSize >= maxSize else { return }
-        let deletedfileSize = (try? fileManager.directorySize(at: file)) ?? 0
-        deleteHandler(file.lastPathComponent)
-        totalSize -= deletedfileSize
-      }
+    for file in files {
+      guard totalSize >= maxSize else { break }
+      let deletedfileSize = (try? await fileManager.directorySize(at: file)) ?? 0
+      totalSize -= deletedfileSize
+      deletFiles.append(file)
+    }
+    return deletFiles
   }
 }
