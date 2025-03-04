@@ -34,6 +34,7 @@ actor FTFileManager: Sendable {
   
   @discardableResult
   func create(fileName: String, data: Data?, eTag: String?, modified: String?) -> Bool {
+    let totalSize = getTotalCacheSize()
     if !fileManager.fileExists(atPath: cacheDirectory.path()) {
       try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
     }
@@ -50,7 +51,6 @@ actor FTFileManager: Sendable {
     }
     defer {
       let createFileSize = (try? directorySize(at: destination)) ?? 0
-      let totalSize = getTotalCacheSize()
       totalCacheSize = totalSize + createFileSize
     }
     return fileManager.createFile(atPath: destination.path() + "/image", contents: data)
@@ -80,8 +80,8 @@ actor FTFileManager: Sendable {
     try fileManager.setAttributes(attributes, ofItemAtPath: destination.path())
   }
   
-  func contentsOfDirectory(includingPropertiesForKeys: [URLResourceKey]?) throws -> [URL] {
-    return try fileManager.contentsOfDirectory(
+  func contentsOfDirectory(includingPropertiesForKeys: [URLResourceKey]?) -> [URL]? {
+    return try? fileManager.contentsOfDirectory(
       at: cacheDirectory,
       includingPropertiesForKeys: includingPropertiesForKeys,
       options: []
@@ -106,7 +106,7 @@ actor FTFileManager: Sendable {
 
 extension FTFileManager {
   private func calculateTotalSize() -> Int {
-    let files =  try! contentsOfDirectory(includingPropertiesForKeys: nil)
+    guard let files = contentsOfDirectory(includingPropertiesForKeys: nil) else { return 0 }
     return files.reduce(0) { totalSize, file in
       let fileSize = (try? self.directorySize(at: file)) ?? 0
       return totalSize + fileSize
