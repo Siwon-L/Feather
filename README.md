@@ -1,7 +1,7 @@
-# Feater
+# Feather
 
 <div align="center">   
-Features provide a lightweight yet powerful image downloading and caching functionality.
+Feather offers lightweight yet powerful image downloading and caching capabilities.
 </div>
 
 
