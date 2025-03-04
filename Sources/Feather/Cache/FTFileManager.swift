@@ -68,6 +68,7 @@ actor FTFileManager: Sendable {
     if fileManager.fileExists(atPath: cacheDirectory.path()) {
       try fileManager.removeItem(at: cacheDirectory)
     }
+    totalCacheSize = 0
   }
   
   func getFileCreateDate(fileName: String) async throws -> Date? {
