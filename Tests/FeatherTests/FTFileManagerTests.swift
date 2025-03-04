@@ -8,42 +8,44 @@ final class FTFileManagerTests: XCTestCase {
     sut = FTFileManager()
   }
   
-  override func tearDownWithError() throws {
-    try sut.removeAll()
+  override func tearDown() async throws {
+    try await sut.removeAll()
     sut = nil
   }
   
-  func test_create() {
+  func test_create() async {
     // Arrange
     let input = Data()
     let fileName = "test"
     // Act
-    sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
+    await sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
     // Assert
-    XCTAssertTrue(sut.fileExists(fileName: fileName))
+    let url = await sut.fileExists(fileName: fileName)
+    XCTAssertTrue(url)
   }
   
-  func test_remove() {
+  func test_remove() async {
     // Arrange
     let input = Data()
     let fileName = "test"
-    sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
+    await sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
     // Act
     do {
-      try sut.remove(fileName: fileName)
+      try await sut.remove(fileName: fileName)
       // Assert
-      XCTAssertFalse(sut.fileExists(fileName: fileName))
+      let url = await sut.fileExists(fileName: fileName)
+      XCTAssertFalse(url)
     } catch {
       XCTFail()
     }
   }
   
-  func test_remove_fail() {
+  func test_remove_fail() async {
     // Arrange
     let fileName = "test"
     // Act
     do {
-      try sut.remove(fileName: fileName)
+      try await sut.remove(fileName: fileName)
       // Assert
       XCTFail()
     } catch {
@@ -51,65 +53,61 @@ final class FTFileManagerTests: XCTestCase {
     }
   }
   
-  func test_get_attributes() {
+  func test_get_attributes() async {
     // Arrange
     let input = Data()
     let fileName = "test"
-    sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
+    await sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
     // Act
     do {
-      let attributes = try sut.attributesOfItem(fileName: fileName)
+      let createDate = try await sut.getFileCreateDate(fileName: fileName)
       // Assert
-      XCTAssertNotNil(attributes[.creationDate] as? Date)
+      XCTAssertNotNil(createDate)
     } catch {
       XCTFail("속성 가져오기 실패")
     }
   }
   
-  func test_set_attributes() {
+  func test_set_attributes() async {
     // Arrange
     let input = Data()
     let fileName = "test"
     let currentDate = Date()
-    sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
+    await sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
     // Act
     do {
-      try sut.setAttributes(
+      try await sut.setAttributes(
         [.modificationDate: currentDate],
         fileName: fileName
       )
-      let attribute = try sut.attributesOfItem(fileName: fileName)[.modificationDate] as? Date
+      let modifiedDate = try await sut.path(fileName: fileName).resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate!
       // Assert
-      XCTAssertEqual(attribute, currentDate)
+      XCTAssertEqual(modifiedDate, currentDate)
     } catch {
       XCTFail("속성 업데이트 실패")
     }
   }
   
-  func test_read_directory() {
+  func test_read_directory() async {
     // Arrange
     let input = Data()
     let fileName = "test"
-    sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
+    await sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
     // Act
-    do {
-      let url = try sut.contentsOfDirectory(includingPropertiesForKeys: nil).filter { $0.lastPathComponent == fileName }.first!
-      
-      // Assert
-      XCTAssertEqual(url.lastPathComponent, fileName)
-    } catch {
-      XCTFail("디렉토리 읽기 실패")
-    }
+    let url = await sut.contentsOfDirectory(includingPropertiesForKeys: nil)!.filter { $0.lastPathComponent == fileName }.first!
+    
+    // Assert
+    XCTAssertEqual(url.lastPathComponent, fileName)
   }
   
-  func test_get_size() {
+  func test_get_size() async {
     // Arrange
     let input = UIImage(systemName: "swift")!.pngData()!
     let fileName = "test"
-    sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
+    await sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
     // Act
-    let path = sut.path(fileName: fileName)
-    let size = try! sut.directorySize(at: path)
+    let path = await sut.path(fileName: fileName)
+    let size = try! await sut.directorySize(at: path)
     // Assert
     XCTAssertEqual(input.count, size)
   }
