@@ -17,16 +17,18 @@ struct LRUPolicy: FTPolicy {
   }
   
   func execute() async -> [URL] {
-    guard let files = try? await fileManager.contentsOfDirectory(
+    guard let files = await fileManager.contentsOfDirectory(
       includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey]
-    ) else { return [] }
-    
-    guard await fileManager.getTotalCacheSize() >= maxSize else { return [] }
+    ) else {
+      return []
+    }
+    let totalSize = await fileManager.getTotalCacheSize()
+    guard totalSize >= maxSize else { return [] }
     return await deleteFilesExceedingMaxSize(files)
   }
   
-  func updateAccessTime(fileName: String) async {
-    try? await fileManager.setAttributes([.modificationDate: Date.now], fileName: fileName)
+  func updateAccessTime(fileName: String, date: Date) async {
+    try? await fileManager.setAttributes([.modificationDate: date], fileName: fileName)
   }
 }
 
@@ -36,14 +38,8 @@ extension LRUPolicy {
     var totalSize = await fileManager.getTotalCacheSize()
     let files = files
       .sorted {
-        let firstFile = (try? $0.resourceValues(
-          forKeys: [.contentModificationDateKey]).contentModificationDate
-        ) ?? .distantPast
-        
-        let secondFile = (try? $1.resourceValues(
-          forKeys: [.contentModificationDateKey]).contentModificationDate
-        ) ?? .distantPast
-        
+        guard let firstFile = (try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate),
+              let secondFile = (try? $1.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) else { return false }
         return firstFile < secondFile
       }
     for file in files {

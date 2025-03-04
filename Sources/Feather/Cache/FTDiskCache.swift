@@ -53,7 +53,7 @@ public final class FTDiskCache: @unchecked Sendable {
       await delete(fileName: fileName)
       return (cache, false)
     }
-    await config?.policy?.updateAccessTime(fileName: fileName)
+    await config?.policy?.updateAccessTime(fileName: fileName, date: .now)
     let cache = FTCacheInfo(
       imageData: imageData,
       eTag: nil,

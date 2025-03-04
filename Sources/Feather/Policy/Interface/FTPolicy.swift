@@ -9,5 +9,5 @@ import Foundation
 
 protocol FTPolicy: Sendable {
   func execute() async -> [URL]
-  func updateAccessTime(fileName: String) async
+  func updateAccessTime(fileName: String, date: Date) async
 }
