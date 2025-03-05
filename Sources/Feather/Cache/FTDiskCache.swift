@@ -32,34 +32,39 @@ public final class FTDiskCache: @unchecked Sendable {
     try await fileManager.removeAll()
   }
   
-  func save(requestURL: URL, data: Data, eTag: String?, modified: String?) async {
+  @discardableResult
+  func save(requestURL: URL, data: Data, eTag: String?, modified: String?) async -> Bool {
+    let result: Bool
     let fileName = sha256(requestURL.absoluteString)
-    guard await !fileManager.fileExists(fileName: fileName) else { return }
-    await fileManager.create(fileName: fileName, data: data, eTag: eTag, modified: modified)
+    result = await fileManager.create(
+      fileName: fileName,
+      data: data,
+      eTag: eTag,
+      modified: modified
+    )
     if let deleteFiles = await config?.policy?.execute() {
       for deleteFile in deleteFiles {
         await delete(fileName: deleteFile.lastPathComponent)
       }
     }
+    return result
   }
   
-  func read(requestURL: URL) async -> (FTCacheInfo, Bool)? {
+  func read(requestURL: URL) async -> (cacheInfo: FTCacheInfo, isHit: Bool)? {
     let fileName = sha256(requestURL.absoluteString)
-    let readFileURL = await fileManager.path(fileName: fileName)
-    guard await fileManager.fileExists(fileName: fileName),
-          let imageData = try? Data(contentsOf: readFileURL.appending(path: "image")) else { return nil }
+    guard let (image, eTag, modified) = await fileManager.readCache(fileName: fileName) else { return nil }
     if await isTimeOut(fileName: fileName) {
       let cache = FTCacheInfo(
-        imageData: imageData,
-        eTag: try? String(contentsOf: readFileURL.appending(path: "eTag.txt"), encoding: .utf8),
-        modified: try? String(contentsOf: readFileURL.appending(path: "modified.txt"), encoding: .utf8)
+        imageData: image,
+        eTag: eTag,
+        modified: modified
       )
       await delete(fileName: fileName)
       return (cache, false)
     }
     await config?.policy?.updateAccessTime(fileName: fileName, date: .now)
     let cache = FTCacheInfo(
-      imageData: imageData,
+      imageData: image,
       eTag: nil,
       modified: nil
     )

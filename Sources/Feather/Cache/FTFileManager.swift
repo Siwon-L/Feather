@@ -27,33 +27,36 @@ actor FTFileManager: Sendable {
     return totalCacheSize
   }
   
-  func fileExists(fileName: String) -> Bool {
+  func readCache(
+    fileName: String
+  ) -> (image: Data, eTag: String?, modified: String?)? {
     let destination = path(fileName: fileName)
-    return fileManager.fileExists(atPath: destination.path)
+    guard fileManager.fileExists(atPath: destination.path) else { return nil }
+    guard let data = try? Data(contentsOf: destination.appending(path: "image")) else { return nil }
+    let eTag = try? String(contentsOf: destination.appending(path: "eTag.txt"), encoding: .utf8)
+    let modified = try? String(contentsOf: destination.appending(path: "modified.txt"), encoding: .utf8)
+    return (data, eTag, modified)
   }
   
   @discardableResult
   func create(fileName: String, data: Data?, eTag: String?, modified: String?) -> Bool {
-    let totalSize = getTotalCacheSize()
     if !fileManager.fileExists(atPath: cacheDirectory.path()) {
       try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
     }
-    let directoryURL = cacheDirectory.appending(path: fileName)
-    try? fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
     let destination = path(fileName: fileName)
-    if let eTag,
-       let eTagData = eTag.data(using: .utf8) {
-      fileManager.createFile(atPath: destination.path() + "/eTag.txt", contents: eTagData)
-    }
-    if let modified,
-       let modifiedData = modified.data(using: .utf8) {
-      fileManager.createFile(atPath: destination.path() + "/modified.txt", contents: modifiedData)
-    }
+    guard !fileManager.fileExists(atPath: destination.path) else { return false }
+    let totalSize = getTotalCacheSize()
+    try? fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
     defer {
       let createFileSize = (try? directorySize(at: destination)) ?? 0
       totalCacheSize = totalSize + createFileSize
     }
-    return fileManager.createFile(atPath: destination.path() + "/image", contents: data)
+    return createCache(
+      path: destination.path(),
+      data: data,
+      eTag: eTag,
+      modified: modified
+    )
   }
   
   func remove(fileName: String) throws {
@@ -112,5 +115,17 @@ extension FTFileManager {
       let fileSize = (try? self.directorySize(at: file)) ?? 0
       return totalSize + fileSize
     }
+  }
+  
+  private func createCache(path: String, data: Data?, eTag: String?, modified: String?) -> Bool {
+    if let eTag,
+       let eTagData = eTag.data(using: .utf8) {
+      fileManager.createFile(atPath: path + "/eTag.txt", contents: eTagData)
+    }
+    if let modified,
+       let modifiedData = modified.data(using: .utf8) {
+      fileManager.createFile(atPath: path + "/modified.txt", contents: modifiedData)
+    }
+    return fileManager.createFile(atPath: path + "/image", contents: data)
   }
 }

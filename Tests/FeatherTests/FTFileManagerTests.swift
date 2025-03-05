@@ -18,10 +18,11 @@ final class FTFileManagerTests: XCTestCase {
     let input = Data()
     let fileName = "test"
     // Act
-    await sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
+    let isSuceeded = await sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
     // Assert
-    let url = await sut.fileExists(fileName: fileName)
-    XCTAssertTrue(url)
+    let output = await sut.readCache(fileName: fileName)
+    XCTAssertTrue(isSuceeded)
+    XCTAssertNotNil(output)
   }
   
   func test_remove() async {
@@ -33,8 +34,8 @@ final class FTFileManagerTests: XCTestCase {
     do {
       try await sut.remove(fileName: fileName)
       // Assert
-      let url = await sut.fileExists(fileName: fileName)
-      XCTAssertFalse(url)
+      let output = await sut.readCache(fileName: fileName)
+      XCTAssertNil(output)
     } catch {
       XCTFail()
     }
