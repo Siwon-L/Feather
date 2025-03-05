@@ -28,6 +28,10 @@ public final class FTDiskCache: @unchecked Sendable {
     self.ttl = ttl
   }
   
+  public func clean() async throws {
+    try await fileManager.removeAll()
+  }
+  
   func save(requestURL: URL, data: Data, eTag: String?, modified: String?) async {
     let fileName = sha256(requestURL.absoluteString)
     guard await !fileManager.fileExists(fileName: fileName) else { return }
