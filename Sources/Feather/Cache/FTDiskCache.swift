@@ -33,29 +33,37 @@ public final class FTDiskCache: @unchecked Sendable {
   }
   
   @discardableResult
-  func save(requestURL: URL, data: Data, eTag: String?, modified: String?) async -> Bool {
-    let result: Bool
+  func save(requestURL: URL, data: Data, eTag: String?, modified: String?) async -> URL? {
     let fileName = sha256(requestURL.absoluteString)
-    result = await fileManager.create(
+    let saveFileURL = await fileManager.create(
       fileName: fileName,
       data: data,
       eTag: eTag,
       modified: modified
     )
-    if let deleteFiles = await config?.policy?.execute() {
-      for deleteFile in deleteFiles {
-        await delete(fileName: deleteFile.lastPathComponent)
-      }
-    }
-    return result
+    await deleteFilesByPolicy()
+    return saveFileURL
+  }
+  
+  @discardableResult
+  func save(requestURL: URL, tempURL: URL, eTag: String?, modified: String?) async throws -> URL? {
+    let fileName = sha256(requestURL.absoluteString)
+    let saveFileURL = await fileManager.create(
+      fileName: fileName,
+      tempURL: tempURL,
+      eTag: eTag,
+      modified: modified
+    )
+    await deleteFilesByPolicy()
+    return saveFileURL
   }
   
   func read(requestURL: URL) async -> (cacheInfo: FTCacheInfo, isHit: Bool)? {
     let fileName = sha256(requestURL.absoluteString)
-    guard let (image, eTag, modified) = await fileManager.readCache(fileName: fileName) else { return nil }
+    guard let (imageURL, eTag, modified) = await fileManager.readCache(fileName: fileName) else { return nil }
     if await isTimeOut(fileName: fileName) {
       let cache = FTCacheInfo(
-        imageData: image,
+        imageData: try? Data(contentsOf: imageURL),
         eTag: eTag,
         modified: modified
       )
@@ -64,7 +72,7 @@ public final class FTDiskCache: @unchecked Sendable {
     }
     await config?.policy?.updateAccessTime(fileName: fileName, date: .now)
     let cache = FTCacheInfo(
-      imageData: image,
+      imageURL: imageURL,
       eTag: nil,
       modified: nil
     )
@@ -90,5 +98,13 @@ extension FTDiskCache {
       }
     }
     return false
+  }
+  
+  private func deleteFilesByPolicy() async {
+    if let deleteFiles = await config?.policy?.execute() {
+      for deleteFile in deleteFiles {
+        await delete(fileName: deleteFile.lastPathComponent)
+      }
+    }
   }
 }
