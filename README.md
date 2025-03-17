@@ -12,6 +12,7 @@ Feather offers lightweight yet powerful image downloading and caching capabiliti
 - Configurable cache expiration time
 - Set a maximum cache size and manage data efficiently using LRU (Least Recently Used)
 - Prevent data races using `Actor`
+- Image Downsampling
 
 ### Image Download & Caching
 
@@ -19,7 +20,7 @@ Feather offers lightweight yet powerful image downloading and caching capabiliti
 import Feather
 
 let imageView = FTImageView()
-imageView.setImageURL(URL("https://example.com/sample.png")!)
+imageView.setImageURL(URL(string: "https://example.com/sample.png")!)
 ```
 `FTImageView` is a subclass of `UIImageView`. You can download and cache images via URL using the `setImageURL(_ url:)` method of `FTImageView`. If the same URL is requested again, the cached image will be loaded instead.
 
