@@ -31,7 +31,10 @@ open class FTImageView: UIImageView {
       default:
         pixeSize = min(frame.width, frame.height)
       }
-      if isDownsampling, let cgImage = await downsampler.downsample(downloadURL, pixelSize: pixeSize) {
+      if isDownsampling, let cgImage = await downsampler.downsample(
+        downloadURL,
+        pixelSize: pixeSize * UIScreen.main.scale
+      ) {
         image = UIImage(cgImage: cgImage)
       } else {
         image = UIImage(contentsOfFile: downloadURL.path)
