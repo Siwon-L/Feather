@@ -19,7 +19,10 @@ let package = Package(
             name: "Feather"),
         .testTarget(
             name: "FeatherTests",
-            dependencies: ["Feather"]
+            dependencies: ["Feather"],
+            resources: [
+              .process("Resources")
+            ]
         ),
     ]
 )

@@ -25,35 +25,38 @@ final class FTDiskCacheTests: XCTestCase {
     let requestURL = URL(string: "https://example.com/image.jpg")!
     let data = Data()
     // Act
-    let isScucess = await sut.save(
+    let url = await sut.save(
       requestURL: requestURL,
       data: data,
       eTag: nil,
       modified: nil
     )
     // Assert
-    XCTAssertTrue(isScucess)
+    XCTAssertNotNil(url)
   }
   
-  func test_save_호출_시_이미_캐시가_존재할_경우_false() async {
+  func test_save_호출_시_이미_캐시가_존재할_경우_이전에_캐싱된_이미지가_반환된다() async {
     // Arrange
     let requestURL = URL(string: "https://example.com/image.jpg")!
-    let data = Data()
-    await sut.save(
+    let firstData = UIImage(systemName: "swift")!.pngData()!
+    let secondData = Data()
+    // Act
+    let firstOutput = await sut.save(
       requestURL: requestURL,
-      data: data,
+      data: firstData,
       eTag: nil,
       modified: nil
     )
-    // Act
-    let isScucess = await sut.save(
+    
+    let secondOutput = await sut.save(
       requestURL: requestURL,
-      data: data,
+      data: secondData,
       eTag: nil,
       modified: nil
     )
     // Assert
-    XCTAssertFalse(isScucess)
+    XCTAssertEqual(firstData.count, try! Data(contentsOf: secondOutput!).count)
+    XCTAssertNotEqual(secondData.count, try! Data(contentsOf: secondOutput!).count)
   }
   
   func test_read() async {
@@ -71,7 +74,7 @@ final class FTDiskCacheTests: XCTestCase {
     // Assert
     XCTAssertNotNil(output)
     XCTAssertTrue(output!.isHit)
-    XCTAssertEqual(output!.cacheInfo.imageData, data)
+    XCTAssertEqual(try! Data(contentsOf: output!.cacheInfo.imageURL!), data)
   }
   
   func test_read_호출_시_timeOut된_경우_isHit_false_및_해당_캐시_제거됨() async {

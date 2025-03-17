@@ -29,24 +29,20 @@ actor FTFileManager: Sendable {
   
   func readCache(
     fileName: String
-  ) -> (image: Data, eTag: String?, modified: String?)? {
+  ) -> (imageURL: URL, eTag: String?, modified: String?)? {
     let destination = path(fileName: fileName)
     guard fileManager.fileExists(atPath: destination.path) else { return nil }
-    guard let data = try? Data(contentsOf: destination.appending(path: "image")) else { return nil }
+    let imageURL = destination.appending(path: "image")
     let eTag = try? String(contentsOf: destination.appending(path: "eTag.txt"), encoding: .utf8)
     let modified = try? String(contentsOf: destination.appending(path: "modified.txt"), encoding: .utf8)
-    return (data, eTag, modified)
+    return (imageURL, eTag, modified)
   }
   
   @discardableResult
-  func create(fileName: String, data: Data?, eTag: String?, modified: String?) -> Bool {
-    if !fileManager.fileExists(atPath: cacheDirectory.path()) {
-      try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
-    }
+  func create(fileName: String, data: Data?, eTag: String?, modified: String?) -> URL? {
     let destination = path(fileName: fileName)
-    guard !fileManager.fileExists(atPath: destination.path) else { return false }
+    guard createCacheItemDirectory(destination: destination) else { return destination.appending(path: "image") }
     let totalSize = getTotalCacheSize()
-    try? fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
     defer {
       let createFileSize = (try? directorySize(at: destination)) ?? 0
       totalCacheSize = totalSize + createFileSize
@@ -54,6 +50,23 @@ actor FTFileManager: Sendable {
     return createCache(
       path: destination.path(),
       data: data,
+      eTag: eTag,
+      modified: modified
+    )
+  }
+  
+  @discardableResult
+  func create(fileName: String, tempURL: URL, eTag: String?, modified: String?) -> URL? {
+    let destination = path(fileName: fileName)
+    guard createCacheItemDirectory(destination: destination) else { return destination.appending(path: "image") }
+    let totalSize = getTotalCacheSize()
+    defer {
+      let createFileSize = (try? directorySize(at: destination)) ?? 0
+      totalCacheSize = totalSize + createFileSize
+    }
+    return createCache(
+      path: destination.path(),
+      tempURL: tempURL,
       eTag: eTag,
       modified: modified
     )
@@ -117,7 +130,39 @@ extension FTFileManager {
     }
   }
   
-  private func createCache(path: String, data: Data?, eTag: String?, modified: String?) -> Bool {
+  private func createCache(path: String, data: Data?, eTag: String?, modified: String?) -> URL? {
+    createETagAndModifiedFile(path: path, eTag: eTag, modified: modified)
+    if fileManager.createFile(atPath: path + "/image", contents: data) {
+      return URL(fileURLWithPath: path + "/image")
+    }
+    return nil
+  }
+  
+  private func createCache(path: String, tempURL: URL, eTag: String?, modified: String?) -> URL? {
+    createETagAndModifiedFile(path: path, eTag: eTag, modified: modified)
+    let imageFileURL = URL(fileURLWithPath: path + "/image")
+    do {
+      try fileManager.moveItem(at: tempURL, to: imageFileURL)
+      return imageFileURL
+    } catch {
+      return nil
+    }
+  }
+  
+  private func createCacheItemDirectory(destination: URL) -> Bool {
+    if !fileManager.fileExists(atPath: cacheDirectory.path()) {
+      try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+    }
+    guard !fileManager.fileExists(atPath: destination.path) else { return false }
+    do {
+      try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
+      return true
+    } catch {
+      return false
+    }
+  }
+  
+  private func createETagAndModifiedFile(path: String, eTag: String?, modified: String?) {
     if let eTag,
        let eTagData = eTag.data(using: .utf8) {
       fileManager.createFile(atPath: path + "/eTag.txt", contents: eTagData)
@@ -126,6 +171,5 @@ extension FTFileManager {
        let modifiedData = modified.data(using: .utf8) {
       fileManager.createFile(atPath: path + "/modified.txt", contents: modifiedData)
     }
-    return fileManager.createFile(atPath: path + "/image", contents: data)
   }
 }

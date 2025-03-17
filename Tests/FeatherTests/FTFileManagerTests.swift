@@ -18,11 +18,9 @@ final class FTFileManagerTests: XCTestCase {
     let input = Data()
     let fileName = "test"
     // Act
-    let isSuceeded = await sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
+    let url = await sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
     // Assert
-    let output = await sut.readCache(fileName: fileName)
-    XCTAssertTrue(isSuceeded)
-    XCTAssertNotNil(output)
+    XCTAssertNotNil(url)
   }
   
   func test_remove() async {
