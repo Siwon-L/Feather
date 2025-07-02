@@ -62,7 +62,7 @@ open class FTImageView: UIImageView {
     downloadTask = Task { [weak self] in
       guard let self = self,
             let downloadURL = try? await imageDownloader.download(url: url) else { return }
-      if downloadTask?.isCancelled == true { return }
+      if Task.isCancelled == true { return }
       let image: UIImage?
       let pixeSize: CGFloat
       switch contentMode {
