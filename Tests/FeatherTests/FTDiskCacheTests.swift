@@ -41,22 +41,22 @@ final class FTDiskCacheTests: XCTestCase {
     let firstData = UIImage(systemName: "swift")!.pngData()!
     let secondData = Data()
     // Act
-    let firstOutput = await sut.save(
+    let _ = await sut.save(
       requestURL: requestURL,
       data: firstData,
       eTag: nil,
       modified: nil
     )
     
-    let secondOutput = await sut.save(
+    let output = await sut.save(
       requestURL: requestURL,
       data: secondData,
       eTag: nil,
       modified: nil
     )
     // Assert
-    XCTAssertEqual(firstData.count, try! Data(contentsOf: secondOutput!).count)
-    XCTAssertNotEqual(secondData.count, try! Data(contentsOf: secondOutput!).count)
+    XCTAssertEqual(firstData.count, try! Data(contentsOf: output!).count)
+    XCTAssertNotEqual(secondData.count, try! Data(contentsOf: output!).count)
   }
   
   func test_read() async {

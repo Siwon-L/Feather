@@ -30,25 +30,25 @@ actor FTFileManager: Sendable {
   func readCache(
     fileName: String
   ) -> (imageURL: URL, eTag: String?, modified: String?)? {
-    let destination = path(fileName: fileName)
+    let destination = cacheDirectory.append(path: fileName)
     guard fileManager.fileExists(atPath: destination.path) else { return nil }
-    let imageURL = destination.appending(path: "image")
-    let eTag = try? String(contentsOf: destination.appending(path: "eTag.txt"), encoding: .utf8)
-    let modified = try? String(contentsOf: destination.appending(path: "modified.txt"), encoding: .utf8)
+    let imageURL = destination.append(path: "image")
+    let eTag = try? String(contentsOf: destination.append(path: "eTag.txt"), encoding: .utf8)
+    let modified = try? String(contentsOf: destination.append(path: "modified.txt"), encoding: .utf8)
     return (imageURL, eTag, modified)
   }
   
   @discardableResult
   func create(fileName: String, data: Data?, eTag: String?, modified: String?) -> URL? {
-    let destination = path(fileName: fileName)
-    guard createCacheItemDirectory(destination: destination) else { return destination.appending(path: "image") }
+    let destination = cacheDirectory.append(path: fileName)
+    guard createCacheItemDirectory(destination: destination) else { return destination.append(path: "image") }
     let totalSize = getTotalCacheSize()
     defer {
       let createFileSize = (try? directorySize(at: destination)) ?? 0
       totalCacheSize = totalSize + createFileSize
     }
     return createCache(
-      path: destination.path(),
+      path: destination.gatPath(),
       data: data,
       eTag: eTag,
       modified: modified
@@ -57,15 +57,15 @@ actor FTFileManager: Sendable {
   
   @discardableResult
   func create(fileName: String, tempURL: URL, eTag: String?, modified: String?) -> URL? {
-    let destination = path(fileName: fileName)
-    guard createCacheItemDirectory(destination: destination) else { return destination.appending(path: "image") }
+    let destination = cacheDirectory.append(path: fileName)
+    guard createCacheItemDirectory(destination: destination) else { return destination.append(path: "image") }
     let totalSize = getTotalCacheSize()
     defer {
       let createFileSize = (try? directorySize(at: destination)) ?? 0
       totalCacheSize = totalSize + createFileSize
     }
     return createCache(
-      path: destination.path(),
+      path: destination.gatPath(),
       tempURL: tempURL,
       eTag: eTag,
       modified: modified
@@ -73,7 +73,7 @@ actor FTFileManager: Sendable {
   }
   
   func remove(fileName: String) throws {
-    let destination = path(fileName: fileName)
+    let destination = cacheDirectory.append(path: fileName)
     let deleteFileSize = (try? directorySize(at: destination)) ?? 0
     try fileManager.removeItem(at: destination)
     let totalSize = getTotalCacheSize()
@@ -81,20 +81,20 @@ actor FTFileManager: Sendable {
   }
   
   func removeAll() throws {
-    if fileManager.fileExists(atPath: cacheDirectory.path()) {
+    if fileManager.fileExists(atPath: cacheDirectory.gatPath()) {
       try fileManager.removeItem(at: cacheDirectory)
     }
     totalCacheSize = 0
   }
   
   func getFileCreateDate(fileName: String) async throws -> Date? {
-    let destination = path(fileName: fileName)
-    return try fileManager.attributesOfItem(atPath: destination.path())[.creationDate] as? Date
+    let destination = cacheDirectory.append(path: fileName)
+    return try fileManager.attributesOfItem(atPath: destination.gatPath())[.creationDate] as? Date
   }
   
   func setAttributes(_ attributes: [FileAttributeKey: Any], fileName: String) throws {
-    let destination = path(fileName: fileName)
-    try fileManager.setAttributes(attributes, ofItemAtPath: destination.path())
+    let destination = cacheDirectory.append(path: fileName)
+    try fileManager.setAttributes(attributes, ofItemAtPath: destination.gatPath())
   }
   
   func contentsOfDirectory(includingPropertiesForKeys: [URLResourceKey]?) -> [URL]? {
@@ -114,10 +114,6 @@ actor FTFileManager: Sendable {
       guard let fileSize = try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize else { return totalSize }
       return totalSize + fileSize
     })
-  }
-  
-  func path(fileName: String) -> URL {
-    return cacheDirectory.appending(path: fileName)
   }
 }
 
@@ -150,7 +146,7 @@ extension FTFileManager {
   }
   
   private func createCacheItemDirectory(destination: URL) -> Bool {
-    if !fileManager.fileExists(atPath: cacheDirectory.path()) {
+    if !fileManager.fileExists(atPath: cacheDirectory.gatPath()) {
       try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
     }
     guard !fileManager.fileExists(atPath: destination.path) else { return false }
@@ -170,6 +166,24 @@ extension FTFileManager {
     if let modified,
        let modifiedData = modified.data(using: .utf8) {
       fileManager.createFile(atPath: path + "/modified.txt", contents: modifiedData)
+    }
+  }
+}
+
+private extension URL {
+  func append(path: String) -> URL {
+    if #available(iOS 16.0, *) {
+      return self.appending(path: path)
+    } else {
+      return self.appendingPathComponent(path)
+    }
+  }
+  
+  func gatPath() -> String {
+    if #available(iOS 16.0, *) {
+      return self.path()
+    } else {
+      return self.path
     }
   }
 }

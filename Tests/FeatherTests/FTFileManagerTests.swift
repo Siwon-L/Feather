@@ -3,14 +3,17 @@ import XCTest
 
 final class FTFileManagerTests: XCTestCase {
   var sut: FTFileManager!
+  var cacheDirectory: URL!
   
   override func setUpWithError() throws {
     sut = FTFileManager()
+    cacheDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("ImageCache")
   }
   
   override func tearDown() async throws {
     try await sut.removeAll()
     sut = nil
+    cacheDirectory = nil
   }
   
   func test_create() async {
@@ -79,7 +82,7 @@ final class FTFileManagerTests: XCTestCase {
         [.modificationDate: currentDate],
         fileName: fileName
       )
-      let modifiedDate = try await sut.path(fileName: fileName).resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate!
+      let modifiedDate = try cacheDirectory.appendingPathComponent(fileName).resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate!
       // Assert
       XCTAssertEqual(modifiedDate, currentDate)
     } catch {
@@ -105,7 +108,7 @@ final class FTFileManagerTests: XCTestCase {
     let fileName = "test"
     await sut.create(fileName: fileName, data: input, eTag: nil, modified: nil)
     // Act
-    let path = await sut.path(fileName: fileName)
+    let path = cacheDirectory.appendingPathComponent(fileName)
     let size = try! await sut.directorySize(at: path)
     // Assert
     XCTAssertEqual(input.count, size)

@@ -19,12 +19,12 @@ final class FTDownsamplerTests: XCTestCase {
     sut = nil
   }
   
-  func test_downsample() {
+  func test_downsample() async {
     // Arrange
     let imageURL = Bundle.module.url(forResource: "dummy_image", withExtension: "png")
-    let originalData = UIImage(contentsOfFile: imageURL!.path())!.pngData()!
+    let originalData = UIImage(contentsOfFile: imageURL!.path)!.pngData()!
     // Act
-    let cgImage = sut.downsample(imageURL!, pixelSize: 100)!
+    let cgImage = await sut.downsample(imageURL!, pixelSize: 100)!
     let downsampledData = UIImage(cgImage: cgImage).pngData()!
     // Assert
     XCTAssertTrue(originalData.count > downsampledData.count)

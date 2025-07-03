@@ -27,12 +27,13 @@ final class LRUPolicyTests: XCTestCase {
     // Arrange
     let fileName = "test"
     let updateDate = Date().addingTimeInterval(60 * 60)
+    let cacheDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("ImageCache")
     await fileManager.create(fileName: fileName, data: Data(), eTag: nil, modified: nil)
     // Act
     await sut.updateAccessTime(fileName: fileName, date: updateDate)
     // Assert
     do {
-      let modifiedDate = try await fileManager.path(fileName: fileName).resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate!
+      let modifiedDate = try cacheDirectory.appendingPathComponent(fileName).resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate!
       XCTAssertEqual(modifiedDate, updateDate)
     } catch {
       XCTFail()
