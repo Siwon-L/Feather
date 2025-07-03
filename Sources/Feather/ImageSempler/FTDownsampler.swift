@@ -13,7 +13,8 @@ struct FTDownsampler {
     guard let imageSource = CGImageSourceCreateWithURL(imageURL as CFURL, nil) else { return nil }
     let downsampleOptions: [NSString: Any] = [
       kCGImageSourceCreateThumbnailFromImageAlways: true,
-      kCGImageSourceThumbnailMaxPixelSize: pixelSize
+      kCGImageSourceThumbnailMaxPixelSize: pixelSize,
+      kCGImageSourceCreateThumbnailWithTransform: true
     ]
     return CGImageSourceCreateThumbnailAtIndex(imageSource, 0, downsampleOptions as CFDictionary)
   }
