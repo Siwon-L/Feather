@@ -18,13 +18,15 @@ public struct FTImageModifier: ViewModifier {
   private let downsampler = FTDownsampler()
   private let url: URL
   private let isDownsampling: Bool
+  private let placeholder: () -> AnyView
   
   @State private var downloadTask: Task<Void, any Error>? = nil
   @State private var uiimage: UIImage? = nil
   
-  public init(url: URL, isDownsampling: Bool) {
+  public init(url: URL, isDownsampling: Bool, @ViewBuilder placeholder: @escaping () -> some View) {
     self.url = url
     self.isDownsampling = isDownsampling
+    self.placeholder = { AnyView(placeholder()) }
   }
   
   public func body(content: Content) -> some View {
@@ -34,7 +36,7 @@ public struct FTImageModifier: ViewModifier {
           .resizable()
           .onDisappear { cancel() }
       } else {
-        Color.gray
+        placeholder()
           .onAppear { start(reader.size) }
       }
     }
@@ -68,7 +70,11 @@ public struct FTImageModifier: ViewModifier {
 }
 
 public extension View where Self == FTImage {
-  func setImageURL(_ url: URL, isDownsampling: Bool = true) -> some View {
-    modifier(FTImageModifier(url: url, isDownsampling: isDownsampling))
+  func setImageURL(
+  _ url: URL,
+  isDownsampling: Bool = true,
+  placeholder: @escaping () -> some View = { EmptyView() }
+  ) -> some View {
+    modifier(FTImageModifier(url: url, isDownsampling: isDownsampling, placeholder: placeholder))
   }
 }
