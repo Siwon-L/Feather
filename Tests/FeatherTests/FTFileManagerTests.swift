@@ -113,4 +113,40 @@ final class FTFileManagerTests: XCTestCase {
     // Assert
     XCTAssertEqual(input.count, size)
   }
+  
+  func test_concurrent() async {
+    // Arrange
+    let imageURL = Bundle.module.url(forResource: "dummy_image", withExtension: "png")!
+    let imageData = UIImage(contentsOfFile: imageURL.path)!.pngData()!
+    let fileNames = Array(1...1000).map(String.init)
+    let fileManager = sut!
+    
+    // Act - Create concurrently
+    let startCreate = Date()
+    await withTaskGroup(of: Void.self) { group in
+      for name in fileNames {
+        let data = imageData
+        group.addTask {
+          await fileManager.create(fileName: name, data: data, eTag: nil, modified: nil)
+        }
+      }
+    }
+    let durationCreate = Date().timeIntervalSince(startCreate)
+
+    // Act - Read concurrently
+    let startRead = Date()
+    await withTaskGroup(of: Void.self) { group in
+      for name in fileNames {
+        group.addTask {
+          _ = await fileManager.readCache(fileName: name)
+        }
+      }
+    }
+    let durationRead = Date().timeIntervalSince(startRead)
+
+    // Assert
+    print("Time to create 1000 files concurrently: \(durationCreate) seconds")
+    print("Time to read 1000 files concurrently: \(durationRead) seconds")
+  }
 }
+
